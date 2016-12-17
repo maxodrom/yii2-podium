@@ -7,6 +7,7 @@ use bizley\podium\models\Forum;
 use bizley\podium\models\Thread;
 use bizley\podium\models\User;
 use bizley\podium\rbac\Rbac;
+use bizley\podium\services\ThreadVerifier;
 use Yii;
 use yii\filters\AccessControl;
 use yii\helpers\Html;
@@ -36,6 +37,33 @@ class ForumThreadController extends BaseController
     }
     
     /**
+     * Returns separated thread actions.
+     * @return array
+     * @since 0.6
+     */
+    public function actions()
+    {
+        return [
+            'lock' => [
+                'class' => 'bizley\podium\actions\ThreadAction',
+                'permission' => Rbac::PERM_LOCK_THREAD,
+                'boolAttribute' => 'locked',
+                'switcher' => 'podiumLock',
+                'onMessage' => Yii::t('podium/flash', 'Thread has been locked.'),
+                'offMessage' => Yii::t('podium/flash', 'Thread has been unlocked.')
+            ],
+            'pin' => [
+                'class' => 'bizley\podium\actions\ThreadAction',
+                'permission' => Rbac::PERM_PIN_THREAD,
+                'boolAttribute' => 'pinned',
+                'switcher' => 'podiumPin',
+                'onMessage' => Yii::t('podium/flash', 'Thread has been pinned.'),
+                'offMessage' => Yii::t('podium/flash', 'Thread has been unpinned.')
+            ],
+        ];
+    }
+    
+    /**
      * Deleting the thread of given category ID, forum ID, own ID and slug.
      * @param int $cid category ID
      * @param int $fid forum ID
@@ -45,7 +73,12 @@ class ForumThreadController extends BaseController
      */
     public function actionDelete($cid = null, $fid = null, $id = null, $slug = null)
     {
-        $thread = Thread::verify($cid, $fid, $id, $slug, $this->module->user->isGuest);
+        $thread = (new ThreadVerifier([
+            'categoryId' => $cid, 
+            'forumId' => $fid,
+            'threadId' => $id, 
+            'threadSlug' => $slug
+        ]))->verify();
         if (empty($thread)) {
             $this->error(Yii::t('podium/flash', 'Sorry! We can not find the thread you are looking for.'));
             return $this->redirect(['forum/index']);
@@ -77,44 +110,6 @@ class ForumThreadController extends BaseController
     }
     
     /**
-     * Locking / unlocking the thread of given category ID, forum ID, own ID and slug.
-     * @param int $cid category ID
-     * @param int $fid forum ID
-     * @param int $id thread ID
-     * @param string $slug thread slug
-     * @return Response
-     */
-    public function actionLock($cid = null, $fid = null, $id = null, $slug = null)
-    {
-        $thread = Thread::verify($cid, $fid, $id, $slug, $this->module->user->isGuest);
-        if (empty($thread)) {
-            $this->error(Yii::t('podium/flash', 'Sorry! We can not find the thread you are looking for.'));
-            return $this->redirect(['forum/index']);
-        }
-
-        if (!User::can(Rbac::PERM_LOCK_THREAD, ['item' => $thread])) {
-            $this->error(Yii::t('podium/flash', 'Sorry! You do not have the required permission to perform this action.'));
-            return $this->redirect(['forum/index']);
-        }
-            
-        if ($thread->podiumLock()) {
-            $this->success($thread->locked 
-                ? Yii::t('podium/flash', 'Thread has been locked.') 
-                : Yii::t('podium/flash', 'Thread has been unlocked.')
-            );
-        } else {
-            $this->error(Yii::t('podium/flash', 'Sorry! There was an error while updating the thread.'));
-        }
-        return $this->redirect([
-            'forum/thread', 
-            'cid' => $thread->forum->category->id, 
-            'fid' => $thread->forum->id, 
-            'id' => $thread->id, 
-            'slug' => $thread->slug
-        ]);
-    }
-    
-    /**
      * Moving the thread of given category ID, forum ID, own ID and slug.
      * @param int $cid category ID
      * @param int $fid forum ID
@@ -124,7 +119,12 @@ class ForumThreadController extends BaseController
      */
     public function actionMove($cid = null, $fid = null, $id = null, $slug = null)
     {
-        $thread = Thread::verify($cid, $fid, $id, $slug, $this->module->user->isGuest);
+        $thread = (new ThreadVerifier([
+            'categoryId' => $cid, 
+            'forumId' => $fid,
+            'threadId' => $id, 
+            'threadSlug' => $slug
+        ]))->verify();
         if (empty($thread)) {
             $this->error(Yii::t('podium/flash', 'Sorry! We can not find the thread you are looking for.'));
             return $this->redirect(['forum/index']);
@@ -232,44 +232,6 @@ class ForumThreadController extends BaseController
             'preview' => $preview,
             'model' => $model,
             'forum' => $forum,
-        ]);
-    }
-    
-    /**
-     * Pinning the thread of given category ID, forum ID, own ID and slug.
-     * @param int $cid category ID
-     * @param int $fid forum ID
-     * @param int $id thread ID
-     * @param string $slug thread slug
-     * @return Response
-     */
-    public function actionPin($cid = null, $fid = null, $id = null, $slug = null)
-    {
-        $thread = Thread::verify($cid, $fid, $id, $slug, $this->module->user->isGuest);
-        if (empty($thread)) {
-            $this->error(Yii::t('podium/flash', 'Sorry! We can not find the thread you are looking for.'));
-            return $this->redirect(['forum/index']);
-        }
-
-        if (!User::can(Rbac::PERM_PIN_THREAD, ['item' => $thread])) {
-            $this->error(Yii::t('podium/flash', 'Sorry! You do not have the required permission to perform this action.'));
-            return $this->redirect(['forum/index']);
-        }
-
-        if ($thread->podiumPin()) {
-            $this->success($thread->pinned 
-                ? Yii::t('podium/flash', 'Thread has been pinned.') 
-                : Yii::t('podium/flash', 'Thread has been unpinned.')
-            );
-        } else {
-            $this->error(Yii::t('podium/flash', 'Sorry! There was an error while updating the thread.'));
-        }
-        return $this->redirect([
-            'forum/thread', 
-            'cid' => $thread->forum->category->id, 
-            'fid' => $thread->forum->id, 
-            'id' => $thread->id, 
-            'slug' => $thread->slug
         ]);
     }
 }

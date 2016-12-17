@@ -388,7 +388,7 @@ abstract class UserActiveRecord extends ActiveRecord implements IdentityInterfac
     public function validateCurrentPassword($attribute)
     {
         if (!$this->hasErrors()) {
-            if (!$this->validatePassword($this->current_password)) {
+            if (!$this->validatePassword($this->currentPassword)) {
                 $this->addError($attribute, Yii::t('podium/view', 'Current password is incorrect.'));
             }
         }
@@ -406,10 +406,7 @@ abstract class UserActiveRecord extends ActiveRecord implements IdentityInterfac
     {
         $podium = Podium::getInstance();
         if ($podium->userComponent !== true) {
-            $password_hash = Podium::FIELD_PASSWORD;
-            if (!empty($podium->userPasswordField)) {
-                $password_hash = $podium->userPasswordField;
-            }
+            $password_hash = empty($podium->userPasswordField) ? 'password_hash' : $podium->userPasswordField;
             if (!empty($podium->user->identity->$password_hash)) {
                 return Yii::$app->security->validatePassword($password, $podium->user->identity->$password_hash);
             }

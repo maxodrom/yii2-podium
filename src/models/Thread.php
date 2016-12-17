@@ -56,14 +56,14 @@ class Thread extends ThreadActiveRecord
 
     /**
      * Searches for thread.
-     * @param int $forum_id
+     * @param int $forumId
      * @return ActiveDataProvider
      */
-    public function search($forum_id = null, $filters = null)
+    public function search($forumId = null, $filters = null)
     {
         $query = static::find();
-        if ($forum_id) {
-            $query->where(['forum_id' => (int)$forum_id]);
+        if ($forumId) {
+            $query->where(['forum_id' => (int)$forumId]);
         }
         if (!empty($filters)) {
             if (!empty($filters['pin']) && $filters['pin'] == 1) {
@@ -106,15 +106,15 @@ class Thread extends ThreadActiveRecord
     
     /**
      * Searches for threads created by user of given ID.
-     * @param int $user_id
+     * @param int $userId
      * @return ActiveDataProvider
      */
-    public function searchByUser($user_id)
+    public function searchByUser($userId)
     {
         $query = static::find();
-        $query->where(['author_id' => (int)$user_id]);
+        $query->where(['author_id' => $userId]);
         if (Podium::getInstance()->user->isGuest) {
-            $query->joinWith(['forum' => function($q) {
+            $query->joinWith(['forum' => function ($q) {
                 $q->where([Forum::tableName() . '.visible' => 1]);
             }]);
         }
@@ -233,62 +233,18 @@ class Thread extends ThreadActiveRecord
     
     /**
      * Checks if user is this thread moderator.
-     * @param int $user_id
+     * @param int $userId
      * @return bool
      */
-    public function isMod($user_id = null)
+    public function isMod($userId = null)
     {
         if (User::can(Rbac::ROLE_ADMIN)) {
             return true;
         }
-        if (in_array($user_id, $this->forum->getMods())) {
+        if (in_array($userId, $this->forum->getMods())) {
             return true;
         }
         return false;
-    }
-    
-    /**
-     * Returns the verified thread.
-     * @param int $category_id thread category ID
-     * @param int $forum_id thread forum ID
-     * @param int $id thread ID
-     * @param string $slug thread slug
-     * @param bool $guest whether caller is guest or registered user
-     * @return Thread
-     * @since 0.2
-     */
-    public static function verify($category_id = null, $forum_id = null, $id = null, $slug = null, $guest = true)
-    {
-        if (!is_numeric($category_id) 
-                || $category_id < 1 
-                || !is_numeric($forum_id) 
-                || $forum_id < 1 
-                || !is_numeric($id) 
-                || $id < 1 
-                || empty($slug)) {
-            return null;
-        }
-        return static::find()
-                ->joinWith([
-                    'forum' => function ($query) use ($guest) {
-                        if ($guest) {
-                            $query->andWhere([Forum::tableName() . '.visible' => 1]);
-                        }
-                        $query->joinWith(['category' => function ($query) use ($guest) {
-                            if ($guest) {
-                                $query->andWhere([Category::tableName() . '.visible' => 1]);
-                            }
-                        }]);
-                    }
-                ])
-                ->where([
-                    static::tableName() . '.id' => $id, 
-                    static::tableName() . '.slug' => $slug,
-                    static::tableName() . '.forum_id' => $forum_id,
-                    static::tableName() . '.category_id' => $category_id,
-                ])
-                ->limit(1)
-                ->one();
     }
     
     /**
