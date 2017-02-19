@@ -18,7 +18,7 @@ use yii\db\Expression;
  *
  * @author Paweł Bizley Brzozowski <pawel@positive.codes>
  * @since 0.1
- * 
+ *
  * @property string $parsedPost
  */
 class Thread extends ThreadActiveRecord
@@ -29,7 +29,7 @@ class Thread extends ThreadActiveRecord
     const CLASS_DEFAULT = 'default';
     const CLASS_EDITED  = 'warning';
     const CLASS_NEW     = 'success';
-    
+
     /**
      * Icon classes.
      */
@@ -66,6 +66,7 @@ class Thread extends ThreadActiveRecord
             $query->where(['forum_id' => (int)$forumId]);
         }
         if (!empty($filters)) {
+            $loggedId = User::loggedId();
             if (!empty($filters['pin']) && $filters['pin'] == 1) {
                 $query->andWhere(['pinned' => 1]);
             }
@@ -76,34 +77,38 @@ class Thread extends ThreadActiveRecord
                 $query->andWhere(['>=', 'posts', Podium::getInstance()->podiumConfig->get('hot_minimum')]);
             }
             if (!empty($filters['new']) && $filters['new'] == 1 && !Podium::getInstance()->user->isGuest) {
-                $query->joinWith(['threadView' => function ($q) {
-                    $q->andWhere(['or', ['and', ['user_id' => User::loggedId()],
-                            new Expression('new_last_seen < new_post_at')
-                        ], ['user_id' => null]]);
-                }]);
+                $query->joinWith(['threadView tvn' => function ($q) use ($loggedId) {
+                    $q->onCondition(['tvn.user_id' => $loggedId]);
+                    $q->andWhere(['or',
+                            new Expression('tvn.new_last_seen < new_post_at'),
+                            ['tvn.new_last_seen' => null]
+                        ]);
+                }], false);
             }
             if (!empty($filters['edit']) && $filters['edit'] == 1 && !Podium::getInstance()->user->isGuest) {
-                $query->joinWith(['threadView' => function ($q) {
-                    $q->andWhere(['or', ['and', ['user_id' => User::loggedId()],
-                            new Expression('edited_last_seen < edited_post_at')
-                        ], ['user_id' => null]]);
-                }]);
+                $query->joinWith(['threadView tve' => function ($q) use ($loggedId) {
+                    $q->onCondition(['tve.user_id' => $loggedId]);
+                    $q->andWhere(['or',
+                            new Expression('tve.edited_last_seen < edited_post_at'),
+                            ['tve.edited_last_seen' => null]
+                        ]);
+                }], false);
             }
         }
-        
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => false,
         ]);
         $dataProvider->sort->defaultOrder = [
-            'pinned' => SORT_DESC, 
-            'updated_at' => SORT_DESC, 
+            'pinned' => SORT_DESC,
+            'updated_at' => SORT_DESC,
             'id' => SORT_ASC
         ];
 
         return $dataProvider;
     }
-    
+
     /**
      * Searches for threads created by user of given ID.
      * @param int $userId
@@ -124,7 +129,7 @@ class Thread extends ThreadActiveRecord
             'pagination' => false,
         ]);
         $dataProvider->sort->defaultOrder = [
-            'updated_at' => SORT_DESC, 
+            'updated_at' => SORT_DESC,
             'id' => SORT_ASC
         ];
 
@@ -230,7 +235,7 @@ class Thread extends ThreadActiveRecord
         }
         return $class;
     }
-    
+
     /**
      * Checks if user is this thread moderator.
      * @param int $userId
@@ -246,7 +251,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread delete with parent forum counters update.
      * @return bool
@@ -260,7 +265,7 @@ class Thread extends ThreadActiveRecord
                 throw new Exception('Thread deleting error!');
             }
             $this->forum->updateCounters([
-                'threads' => -1, 
+                'threads' => -1,
                 'posts'   => -$this->postsCount
             ]);
             $transaction->commit();
@@ -273,7 +278,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread posts delete with parent forum counters update.
      * @param array $posts posts IDs
@@ -291,8 +296,8 @@ class Thread extends ThreadActiveRecord
                 }
                 $nPost = Post::find()
                             ->where([
-                                'id' => $post, 
-                                'thread_id' => $this->id, 
+                                'id' => $post,
+                                'thread_id' => $this->id,
                                 'forum_id' => $this->forum->id
                             ])
                             ->limit(1)
@@ -325,7 +330,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread lock / unlock.
      * @return bool
@@ -340,7 +345,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread move with counters update.
      * @param int $target new parent forum's ID
@@ -354,7 +359,7 @@ class Thread extends ThreadActiveRecord
             Log::error('No parent forum of given ID found', $this->id, __METHOD__);
             return false;
         }
-            
+
         $postsCount = $this->postsCount;
         $transaction = Forum::getDb()->beginTransaction();
         try {
@@ -376,7 +381,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread posts move with counters update.
      * @param int $target new parent thread ID
@@ -421,8 +426,8 @@ class Thread extends ThreadActiveRecord
                 }
                 $newPost = Post::find()
                             ->where([
-                                'id'        => $post, 
-                                'thread_id' => $this->id, 
+                                'id'        => $post,
+                                'thread_id' => $this->id,
                                 'forum_id'  => $this->forum->id
                             ])
                             ->limit(1)
@@ -459,7 +464,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs new thread with first post creation and subscription.
      * Saves thread poll.
@@ -539,7 +544,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs thread pin / unpin.
      * @return bool
@@ -554,7 +559,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Performs marking all unread threads as seen for user.
      * @return bool
@@ -569,27 +574,29 @@ class Thread extends ThreadActiveRecord
                 throw new Exception('User ID missing');
             }
             $updateBatch = [];
-            $threadsPrevMarked = Thread::find()->joinWith('threadView')
-                    ->where(['and',
-                        ['user_id' => $loggedId],
-                        ['or',
-                            new Expression('new_last_seen < new_post_at'),
-                            new Expression('edited_last_seen < edited_post_at')
-                        ],
+            $threadsPrevMarked = Thread::find()->joinWith(['threadView' => function ($q) use ($loggedId) {
+                $q->onCondition(['user_id' => $loggedId]);
+                $q->andWhere(['or',
+                        new Expression('new_last_seen < new_post_at'),
+                        new Expression('edited_last_seen < edited_post_at'),
                     ]);
+            }], false);
             $time = time();
             foreach ($threadsPrevMarked->each() as $thread) {
                 $updateBatch[] = $thread->id;
             }
             if (!empty($updateBatch)) {
                 Podium::getInstance()->db->createCommand()->update(ThreadView::tableName(), [
-                    'new_last_seen' => $time, 
+                    'new_last_seen' => $time,
                     'edited_last_seen' => $time
                 ], ['thread_id' => $updateBatch, 'user_id' => $loggedId])->execute();
             }
 
             $insertBatch = [];
-            $threadsNew = Thread::find()->joinWith('threadView')->where(['user_id' => null]);
+            $threadsNew = Thread::find()->joinWith(['threadView' => function ($q) use ($loggedId) {
+                $q->onCondition(['user_id' => $loggedId]);
+                $q->andWhere(['new_last_seen' => null]);
+            }], false);
             foreach ($threadsNew->each() as $thread) {
                 $insertBatch[] = [$loggedId, $thread->id, $time, $time];
             }
@@ -604,7 +611,7 @@ class Thread extends ThreadActiveRecord
         }
         return false;
     }
-    
+
     /**
      * Returns post Markdown-parsed if WYSIWYG editor is switched off.
      * @return string

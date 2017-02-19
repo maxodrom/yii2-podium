@@ -17,7 +17,7 @@ use yii\web\Response;
 /**
  * Podium Admin controller
  * All actions concerning module administration.
- * 
+ *
  * @author Paweł Bizley Brzozowski <pawel@positive.codes>
  * @since 0.1
  */
@@ -37,52 +37,52 @@ class AdminController extends AdminForumController
                     [
                         'actions' => ['ban'],
                         'perm' => Rbac::PERM_BAN_USER,
-                        'redirect' => ['admin/members']
+                        'redirect' => 'admin/members'
                     ],
                     [
                         'actions' => ['delete'],
                         'perm' => Rbac::PERM_DELETE_USER,
-                        'redirect' => ['admin/members']
+                        'redirect' => 'admin/members'
                     ],
                     [
                         'actions' => ['demote', 'promote'],
                         'perm' => Rbac::PERM_PROMOTE_USER,
-                        'redirect' => ['admin/members']
+                        'redirect' => 'admin/members'
                     ],
                     [
                         'actions' => ['mod'],
                         'perm' => Rbac::PERM_PROMOTE_USER,
-                        'redirect' => ['admin/mods']
+                        'redirect' => 'admin/mods'
                     ],
                     [
                         'actions' => ['delete-category'],
                         'perm' => Rbac::PERM_DELETE_CATEGORY,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'actions' => ['delete-forum'],
                         'perm' => Rbac::PERM_DELETE_FORUM,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'actions' => ['edit-category'],
                         'perm' => Rbac::PERM_UPDATE_CATEGORY,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'actions' => ['edit-forum'],
                         'perm' => Rbac::PERM_UPDATE_FORUM,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'actions' => ['new-category'],
                         'perm' => Rbac::PERM_CREATE_CATEGORY,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'actions' => ['new-forum'],
                         'perm' => Rbac::PERM_CREATE_FORUM,
-                        'redirect' => ['admin/categories']
+                        'redirect' => 'admin/categories'
                     ],
                     [
                         'class' => 'bizley\podium\filters\PodiumRoleRule',
@@ -93,7 +93,7 @@ class AdminController extends AdminForumController
             ],
         ];
     }
-    
+
     /**
      * Returns separated admin actions.
      * @return array
@@ -164,7 +164,7 @@ class AdminController extends AdminForumController
         $this->error(Yii::t('podium/flash', 'Sorry! User has got the wrong status.'));
         return $this->redirect(['admin/members']);
     }
-    
+
     /**
      * Deleting the user of given ID.
      * @param int $id
@@ -205,7 +205,7 @@ class AdminController extends AdminForumController
             'searchModel'  => $searchModel,
         ]);
     }
-    
+
     /**
      * Adding/removing forum from the moderation list for user of given ID.
      * @param int $uid user ID
@@ -235,7 +235,7 @@ class AdminController extends AdminForumController
         }
         return $this->redirect(['admin/mods', 'id' => $uid]);
     }
-    
+
     /**
      * Listing and updating moderation list for the forum of given ID.
      * @param int $id forum ID
